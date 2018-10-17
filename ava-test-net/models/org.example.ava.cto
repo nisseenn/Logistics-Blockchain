@@ -1,0 +1,177 @@
+//Definerer namespacet for testnettet
+namespace org.example.ava
+
+//Definerer hvilken status en blankett kan ha. Dette er typer som kan ha 1 eller N verdier.
+enum BlankettStatus {
+  o AWAITING_APPROVAL
+  o APPROVED
+  o SHIPPED
+  o RECEIVED
+  o CLOSED
+  o REJECTED
+}
+
+//Ressurser
+//Definerer en Blankett som identifiseres med en ID. Blanketten har relasjoner til sender, mottaker, FAS og NLK.
+//Merk at BlankettStatus har verdien som vi definerte i enum BlankettStatus
+//[] definerer array
+//--> Definerer relasjoner mellom eiendelen og aktører|
+asset Blankett identified by blankettId {
+o String blankettId
+--> EndePerson sender
+--> EndePerson mottaker
+--> Administrasjon fas
+--> Administrasjon nlk
+o Rule[] rules
+o ProductDetails productDetails
+o String [] evidence
+--> Person [] approval
+o BlankettStatus status
+o String closeReason optional
+}
+
+asset Tplan identified by planId {
+  o String planId
+  --> Administrasjon fas
+  --> EndePerson sjofor
+  o Rule[] rules
+  o SendDetails sendDetails
+  o String [] evidence
+}
+
+//Deklarerer aktører i nettverket
+//Lager Administrasjon for å definere avdelinger
+participant Administrasjon identified by admId {
+  o String admId
+  o String name
+}
+
+//En valgfri abstract deklarering. Brukes som basis for å lage EndePeroson
+abstract participant Person identified by personId {
+  o String personId
+  o String name
+  o String lastName
+  --> Administrasjon administrasjon
+}
+
+// Definerer en valgfri "super-type". Den tar informasjonen og feltene som er nødvendig fra "super-typen"(Person i dette tilfellet) og legger til ytterligere felter fra egen definisjon
+participant EndePerson extends Person {
+  o String avdeling
+}
+
+participant AdmEmployee extends Person {
+}
+
+//Definerer konsepter for at Blanketter og Tplan kan bruke disse
+//Bruker rules i Blankett og Tplan.
+concept Rule {
+  o String ruleId
+  o String ruleText
+}
+
+//Definerer detaljer om forsendelsen. Brukes i Blanketten.
+concept ProductDetails {
+  o String productType
+  o String modellnr
+  o Integer quantity
+  o Double pris
+}
+
+//Definerer detaljer om Tplanen. Brukes av Endepersonen som følger transporten.
+concept SendDetails {
+  o String timeStart
+  o Integer stops
+  o String posStops
+  o String trucknr
+  o String timeFinish
+}
+
+//Definerer transaksjoner og handlinger
+//InitialApplication er transaksjonen som gjennomføres av en endeperson når det skal sendes materiell. Denne transaksjonen fører til at en blankett blir laget.
+transaction InitialApplication {
+  o String blankettId
+  --> EndePerson sender
+  --> EndePerson mottaker
+  o Rule [] rules
+  o ProductDetails productDetails
+}
+
+//Handlinger utsendes av transaksjoner. Disse brukes i JavaScript-filen av transaksjonene. Vi definerer navnet som transaksjonen skal se etter når den gjenomføres. I dette tilfellet "InitialApplicationEvent".
+event InitialApplicationEvent {
+  --> Blankett blankett
+}
+
+transaction tplanApplication {
+  o String planId
+  --> Administrasjon fas
+  --> EndePerson sjofor
+  o Rule [] rules
+  o SendDetails sendDetails
+}
+
+event tplanApplicationEvent {
+  --> Tplan tplan
+}
+
+transaction Approve {
+  --> Blankett blankett
+  --> Person approvingParty
+}
+
+event ApproveEvent {
+  --> Blankett blankett
+  --> Person approvingParty
+}
+
+transaction Reject {
+  --> Blankett blankett
+  o String closeReason
+}
+
+event RejectEvent {
+  --> Blankett blankett
+  o String closeReason
+}
+
+transaction SuggestChanges {
+  --> Blankett blankett
+  o Rule[] rules
+  --> Person suggestingParty
+}
+
+event SuggestChangesEvent {
+  --> Blankett blankett
+  o Rule[] rules
+  --> Person suggestingParty
+}
+
+transaction ShipProduct {
+  --> Blankett blankett
+  o String evidence
+}
+
+event ShipProductEvent {
+  --> Blankett blankett
+}
+
+transaction ReceiveProduct {
+  --> Blankett blankett
+}
+
+event ReceiveProductEvent {
+  --> Blankett blankett
+}
+
+transaction Close {
+  --> Blankett blankett
+  o String closeReason
+}
+
+event CloseEvent {
+  --> Blankett blankett
+  o String closeReason
+}
+
+//For å kjappere lage aktører i nettverket. For å jobbe mer effektivt.
+transaction CreateDemoParticipants {
+}

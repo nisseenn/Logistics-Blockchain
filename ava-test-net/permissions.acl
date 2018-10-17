@@ -1,0 +1,365 @@
+//Denne filen definerer tilganger til de ulike elementene i .cto filen.
+//Definerer "CREATE", "READ", "UPDATE" og "DELETE" som mulige handlinger for de ulike brukerene.
+//Regler kan enten være simple eller "conditional". Dersom den er conditional er det et felt med "condition" i regelen.
+
+//Regelen består av:
+//1. En beskrivelse av regelen
+//2. Aktører som regelen gjelder for
+//3. Hvilken handling de har mulighet til å utføre
+//4. Hvilken ressurs aktøren kan utføre handlinger med
+//5. En betingelse som sier at alle instanser av Participant kan utføre alle handlinger i Participant DERSOM participanten er participanten.
+//6. En handling som enten er ALLOW eller DENY basert på betingelsen.
+rule ParticipantsSeeSelves {
+  	description: "La brukere se seg selv"
+  	participant(p): "org.hyperledger.composer.system.Participant"
+  	operation: ALL
+    resource(r): "org.hyperledger.composer.system.Participant"
+  	condition: (r.getIdentifier() == p.getIdentifier())
+  	action: ALLOW
+}
+
+rule ParticipantsSeeAdministrasjon {
+  	description: "La brukere se administrasjon"
+  	participant: "org.hyperledger.composer.system.Participant"
+  	operation: READ
+    resource: "org.example.ava.Administrasjon"
+  	action: ALLOW
+}
+
+rule SeeOtherEndePersoner {
+	description: "La endepersoner se andre endepersoner"
+  	participant: "org.example.ava.EndePerson"
+  	operation: READ
+    resource: "org.example.ava.EndePerson"
+  	action: ALLOW
+}
+
+rule EndeSeeAdm {
+	description: "La endepersoner se ansatte i administrasjonen"
+  	participant: "org.example.ava.EndePerson"
+  	operation: READ
+    resource: "org.example.ava.AdmEmployee"
+  	action: ALLOW
+}
+
+rule AdmSeeEnde {
+	description: "La administrasjonen se endepersoner"
+  	participant: "org.example.ava.AdmEmployee"
+  	operation: READ
+    resource: "org.example.ava.EndePerson"
+  	action: ALLOW
+}
+
+rule AdmSeeAdm {
+	description: "La administrasjon se andre administrasjon"
+  	participant: "org.example.ava.AdmEmployee"
+  	operation: READ
+    resource: "org.example.ava.AdmEmployee"
+  	action: ALLOW
+}
+
+rule EndePersonSeeAdmEmployee {
+	  description: "La endepersoner se ansatte i administrasjon"
+  	participant(p): "org.example.ava.EndePerson"
+  	operation: READ
+    resource(r): "org.example.ava.AdmEmployee"
+  	condition: (r.administrasjon.getIdentifier() == p.administrasjon.getIdentifier())
+  	action: ALLOW
+}
+
+rule AdmEmployeeSeeEndePerson {
+	  description: "La ansatt i administrasjon se endeperson"
+  	participant(p): "org.example.ava.AdmEmployee"
+  	operation: READ
+    resource(r): "org.example.ava.EndePerson"
+  	condition: (r.administrasjon.getIdentifier() == p.administrasjon.getIdentifier())
+  	action: ALLOW
+}
+
+rule AdmEmployeeSeeAdmEmployee {
+	  description: "La ansatt i administrasjon se andre ansatte i administrasjon"
+  	participant(p): "org.example.ava.AdmEmployee"
+  	operation: READ
+    resource(r): "org.example.ava.AdmEmployee"
+  	condition: (r.administrasjon.getIdentifier() == p.administrasjon.getIdentifier())
+  	action: ALLOW
+}
+
+rule EndePersonMakeApplication {
+	  description: "endeperson lager initialapplication"
+  	participant: "org.example.ava.EndePerson"
+  	operation: CREATE
+    resource: "org.example.ava.InitialApplication"
+  	action: ALLOW
+}
+
+rule EndePersonCreateBlankett {
+	  description: "En initialapplication lager en blankett"
+  	participant: "org.example.ava.EndePerson"
+  	operation: CREATE
+    resource: "org.example.ava.Blankett"
+  	transaction: "org.example.ava.InitialApplication"
+  	action: ALLOW
+}
+
+rule AdmEmployeetplanApplication {
+	  description: "Ansatt i administrasjonen kan lage Transportplan"
+  	participant: "org.example.ava.AdmEmployee"
+  	operation: CREATE
+    resource: "org.example.ava.tplanApplication"
+  	action: ALLOW
+}
+rule AdmEmployeeCreateTplan {
+	  description: "En ansatt i administrasjonen lager Tplan"
+  	participant: "org.example.ava.AdmEmployee"
+  	operation: CREATE
+    resource: "org.example.ava.Tplan"
+  	transaction: "org.example.ava.tplanApplication"
+  	action: ALLOW
+}
+
+rule EndePersonViewBlankett {
+	  description: "La endepersoner se blankett"
+  	participant(p): "org.example.ava.EndePerson"
+  	operation: READ
+    resource(r): "org.example.ava.Blankett"
+    condition: (p.getIdentifier() === r.sender.getIdentifier() || p.getIdentifier() === r.mottaker.getIdentifier())
+  	action: ALLOW
+}
+
+rule DriverViewTplan {
+  description: "Alle sjåfører kan se transportplanen de er en del av"
+  participant(p): "org.example.ava.EndePerson"
+  operation: READ
+  resource(r): "org.example.ava.Tplan"
+  condition: (p.getIdentifier() === r.sjofor.getIdentifier())
+  action: ALLOW
+}
+
+rule AdmViewTplan {
+  description: "Administrasjon i fas kan se transportplanen de er en del av"
+  participant(p): "org.example.ava.AdmEmployee"
+  operation: READ
+  resource(r): "org.example.ava.Tplan"
+  condition: (p.getIdentifier() === r.fas.getIdentifier())
+  action: ALLOW
+}
+
+rule AdmEmployeeViewBlankett {
+	  description: "Ansatt i administrasjon kan se blanketter de er en del av"
+  	participant(p): "org.example.ava.AdmEmployee"
+  	operation: READ
+    resource(r): "org.example.ava.Blankett"
+    condition: (p.administrasjon.getIdentifier() === r.fas.getIdentifier() || p.administrasjon.getIdentifier() === r.nlk.getIdentifier())
+  	action: ALLOW
+}
+
+rule EndePersonApproveApplication {
+	  description: "Endepersoner godkjenner blanketten sin når de sender den inn"
+  	participant(p): "org.example.ava.EndePerson"
+  	operation: CREATE
+    resource(r): "org.example.ava.Approve"
+    condition: (p.getIdentifier() === r.blankett.sender.getIdentifier() || p.getIdentifier() === r.blankett.mottaker.getIdentifier())
+  	action: ALLOW
+}
+
+rule AdmEmployeeApproveApplication {
+	  description: "Ansatte i administrasjonen kan godkjenne blanketten"
+  	participant(p): "org.example.ava.AdmEmployee"
+  	operation: CREATE
+    resource(r): "org.example.ava.Approve"
+    condition: (p.administrasjon.getIdentifier() === r.blankett.fas.getIdentifier() || p.administrasjon.getIdentifier() === r.blankett.nlk.getIdentifier())
+  	action: ALLOW
+}
+
+rule EndePersonAddApproval {
+	  description: "Endepersoner kan oppdatere godkjenningen sin etter endringer er gjort i blanketten av ansatte i administrasjonen"
+  	participant(p): "org.example.ava.EndePerson"
+  	operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+  	transaction(t): "org.example.ava.Approve"
+    condition: (p.getIdentifier() === r.sender.getIdentifier() || p.getIdentifier() === r.mottaker.getIdentifier())
+  	action: ALLOW
+}
+
+rule AdmEmployeeAddApproval {
+	  description: "Ansatte i administrasjon kan godkjenne blanketter"
+  	participant(p): "org.example.ava.AdmEmployee"
+  	operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+  	transaction(t): "org.example.ava.Approve"
+    condition: (p.administrasjon.getIdentifier() === r.sender.getIdentifier() || p.administrasjon.getIdentifier() === r.nlk.getIdentifier())
+  	action: ALLOW
+}
+
+rule EndePersonSubmitSuggestChanges {
+	  description: "Endepersoner kan legge til endringer i blanketten i den initielle blanketten"
+  	participant(p): "org.example.ava.EndePerson"
+  	operation: CREATE
+    resource(r): "org.example.ava.SuggestChanges"
+    condition: (p.getIdentifier() === r.blankett.sender.getIdentifier() || p.getIdentifier() === r.blankett.mottaker.getIdentifier())
+  	action: ALLOW
+}
+
+rule AdmEmployeeSubmitSuggestChanges {
+	  description: "Ansatte i administrasjonen kan foreslå endringer i blanketten"
+  	participant(p): "org.example.ava.AdmEmployee"
+  	operation: CREATE
+    resource(r): "org.example.ava.SuggestChanges"
+    condition: (p.administrasjon.getIdentifier() === r.blankett.fas.getIdentifier() || p.administrasjon.getIdentifier() === r.blankett.nlk.getIdentifier())
+  	action: ALLOW
+}
+
+rule EndePersonSuggestChanges {
+	  description: "Endepersoner kan oppdatere blanketten med endringer"
+  	participant(p): "org.example.ava.EndePerson"
+  	operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+  	transaction(t): "org.example.ava.SuggestChanges"
+    condition: (p.getIdentifier() === r.sender.getIdentifier() || p.getIdentifier() === r.mottaker.getIdentifier())
+  	action: ALLOW
+}
+
+rule AdmEmployeeSuggestChanges {
+	  description: "Ansatte i administrasjonen kan foreslå endringer i blanketten"
+  	participant(p): "org.example.ava.AdmEmployee"
+  	operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+  	transaction(t): "org.example.ava.SuggestChanges"
+    condition: (p.administrasjon.getIdentifier() === r.fas.getIdentifier() || p.administrasjon.getIdentifier() === r.nlk.getIdentifier())
+  	action: ALLOW
+}
+
+rule EndePersonAddChanges {
+	  description: "Endepersoner kan oppdatere blanketten med endringer"
+  	participant(p): "org.example.ava.EndePerson"
+  	operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+  	transaction(t): "org.example.ava.SuggestChanges"
+    condition: (p.getIdentifier() === r.sender.getIdentifier() || p.getIdentifier() === r.mottaker.getIdentifier())
+  	action: ALLOW
+}
+
+
+rule AdmEmployeeAddChanges {
+	  description: "Ansatte i administrasjonen kan foreslå endringer i blanketten"
+  	participant(p): "org.example.ava.EndePerson"
+  	operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+  	transaction(t): "org.example.ava.SuggestChanges"
+    condition: (p.administrasjon.getIdentifier() === r.fas.getIdentifier() || p.administrasjon.getIdentifier() === r.nlk.getIdentifier())
+  	action: ALLOW
+}
+
+rule EndePersonRejectApplication {
+	  description: "Endepersoner kan kansellere blanketter de har utsendt"
+  	participant(p): "org.example.ava.EndePerson"
+  	operation: CREATE
+    resource(r): "org.example.ava.Reject"
+    condition: (p.getIdentifier() === r.blankett.sender.getIdentifier() || p.getIdentifier() === r.blankett.mottaker.getIdentifier())
+  	action: ALLOW
+}
+
+rule AdmEmployeeRejectApplication {
+	  description: "Ansatte i administrasjonen kan avslå blanketter"
+  	participant(p): "org.example.ava.AdmEmployee"
+  	operation: CREATE
+    resource(r): "org.example.ava.Reject"
+    condition: (p.administrasjon.getIdentifier() === r.blankett.fas.getIdentifier() || p.administrasjon.getIdentifier() === r.blankett.nlk.getIdentifier())
+  	action: ALLOW
+}
+
+rule EndePersonMarksAsRejected {
+	  description: "Endepersoner kan oppdatere blanketter med avvist som status"
+  	participant(p): "org.example.ava.EndePerson"
+  	operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+  	transaction(t): "org.example.ava.Reject"
+    condition: (p.getIdentifier() === r.sender.getIdentifier() || p.getIdentifier() === r.mottaker.getIdentifier())
+  	action: ALLOW
+}
+
+rule AdmEmployeeMarksAsRejected {
+	  description: "Ansatte i administrasjonen kan oppdatere blanketter med status som avvist"
+  	participant(p): "org.example.ava.AdmEmployee"
+  	operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+  	transaction(t): "org.example.ava.Reject"
+    condition: (p.administrasjon.getIdentifier() === r.fas.getIdentifier() || p.administrasjon.getIdentifier() === r.nlk.getIdentifier())
+  	action: ALLOW
+}
+
+rule SenderShipProduct {
+    description: "Senderen kan sende materiellet"
+    participant(p): "org.example.ava.EndePerson"
+    operation: CREATE
+    resource(r): "org.example.ava.ShipProduct"
+    condition: (p.getIdentifier() === r.blankett.sender.getIdentifier())
+    action: ALLOW
+}
+
+rule SenderMarkAsShippedProduct {
+    description: "Senderen kan markere materiellet som sendt"
+    participant(p): "org.example.ava.EndePerson"
+    operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+    transaction(t): "org.example.ava.ShipProduct"
+    condition: (p.getIdentifier() === r.sender.getIdentifier())
+    action: ALLOW
+}
+
+rule MottakerReceiveProduct {
+    description: "Mottaker kan motta materiellet"
+    participant(p): "org.example.ava.EndePerson"
+    operation: CREATE
+    resource(r): "org.example.ava.ReceiveProduct"
+    condition: (p.getIdentifier() === r.blankett.mottaker.getIdentifier())
+    action: ALLOW
+}
+
+rule MottakerMarkAsReceivedProduct {
+    description: "Mottaker kan markere materiellet som mottatt"
+    participant(p): "org.example.ava.EndePerson"
+    operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+    transaction(t): "org.example.ava.ReceiveProduct"
+    condition: (p.getIdentifier() === r.mottaker.getIdentifier())
+    action: ALLOW
+}
+
+rule nlkCloseLetter {
+    description: "NLK har rettigheter til å sette blanketten som avsluttet"
+    participant(p): "org.example.ava.AdmEmployee"
+    operation: CREATE
+    resource(r): "org.example.ava.Close"
+    condition: (p.administrasjon.getIdentifier() === r.blankett.nlk.getIdentifier())
+    action: ALLOW
+}
+
+rule nlkMarkLetterClosed {
+    description: "NLK kan markere blanketten som avsluttet"
+    participant(p): "org.example.ava.AdmEmployee"
+    operation: UPDATE
+    resource(r): "org.example.ava.Blankett"
+    transaction(t): "org.example.ava.Close"
+    condition: (p.administrasjon.getIdentifier() === r.nlk.getIdentifier())
+    action: ALLOW
+}
+
+//Kun for demonstrasjon og utvikling
+rule NetworkAdminUser {
+    description: "Nettverksadministratorer får tilgang til alt"
+    participant: "org.hyperledger.composer.system.NetworkAdmin"
+    operation: ALL
+    resource: "**"
+    action: ALLOW
+}
+
+//Kun for demonstrasjon og utvikling
+rule System {
+    description: "Gi alle tilgang til ressursene i systemet"
+    participant: "org.**"
+    operation: ALL
+    resource: "org.hyperledger.composer.system.**"
+    action: ALLOW
+}

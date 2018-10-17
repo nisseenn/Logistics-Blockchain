@@ -1,0 +1,3 @@
+# ava-test-net
+
+bchain
